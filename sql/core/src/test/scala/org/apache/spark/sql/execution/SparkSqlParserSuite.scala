@@ -367,6 +367,17 @@ class SparkSqlParserSuite extends AnalysisTest {
       Project(UnresolvedAlias(concat) :: Nil, UnresolvedRelation(TableIdentifier("t"))))
   }
 
+  test("gosun pipeline concatenation") {
+    val concat = Concat(
+      Concat(UnresolvedAttribute("a") :: UnresolvedAttribute("b") :: Nil) ::
+        UnresolvedAttribute("c") ::
+        Nil
+    )
+    assertEqual(
+      "SELECT a ||| b ||| c FROM t",
+      Project(UnresolvedAlias(concat) :: Nil, UnresolvedRelation(TableIdentifier("t"))))
+  }
+
   test("SPARK-25046 Fix Alter View ... As Insert Into Table") {
     // Single insert query
     intercept("ALTER VIEW testView AS INSERT INTO jt VALUES(1, 1)",

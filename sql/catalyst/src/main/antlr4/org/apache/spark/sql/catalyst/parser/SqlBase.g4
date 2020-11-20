@@ -549,6 +549,10 @@ namedExpression
     : expression (AS? (identifier | identifierList))?
     ;
 
+decodeExpression
+    : valueExpression ',' expression
+    ;
+
 namedExpressionSeq
     : namedExpression (',' namedExpression)*
     ;
@@ -577,8 +581,9 @@ predicate
 valueExpression
     : primaryExpression                                                                      #valueExpressionDefault
     | operator=(MINUS | PLUS | TILDE) valueExpression                                        #arithmeticUnary
+    | left=valueExpression operator=(GO_CONCAT | GO_CONCAT2 | CONCAT_PIPE) right=valueExpression           #arithmeticGosun
     | left=valueExpression operator=(ASTERISK | SLASH | PERCENT | DIV) right=valueExpression #arithmeticBinary
-    | left=valueExpression operator=(PLUS | MINUS | CONCAT_PIPE) right=valueExpression       #arithmeticBinary
+    | left=valueExpression operator=(PLUS | MINUS) right=valueExpression       #arithmeticBinary
     | left=valueExpression operator=AMPERSAND right=valueExpression                          #arithmeticBinary
     | left=valueExpression operator=HAT right=valueExpression                                #arithmeticBinary
     | left=valueExpression operator=PIPE right=valueExpression                               #arithmeticBinary
@@ -588,6 +593,7 @@ valueExpression
 primaryExpression
     : CASE whenClause+ (ELSE elseExpression=expression)? END                                   #searchedCase
     | CASE value=expression whenClause+ (ELSE elseExpression=expression)? END                  #simpleCase
+    | DECODE '(' condition=expression (',' decodeExpression)* ',' elseExpression=expression')' #decodeCase
     | CAST '(' expression AS dataType ')'                                                      #cast
     | STRUCT '(' (argument+=namedExpression (',' argument+=namedExpression)*)? ')'             #struct
     | FIRST '(' expression (IGNORE NULLS)? ')'                                                 #first
@@ -625,7 +631,7 @@ comparisonOperator
     ;
 
 arithmeticOperator
-    : PLUS | MINUS | ASTERISK | SLASH | PERCENT | DIV | TILDE | AMPERSAND | PIPE | CONCAT_PIPE | HAT
+    : PLUS | MINUS | ASTERISK | SLASH | PERCENT | DIV | TILDE | AMPERSAND | PIPE | CONCAT_PIPE | HAT | GO_CONCAT | GO_CONCAT2
     ;
 
 predicateOperator
@@ -815,6 +821,7 @@ DESC: 'DESC';
 FOR: 'FOR';
 INTERVAL: 'INTERVAL';
 CASE: 'CASE';
+DECODE: 'DECODE';
 WHEN: 'WHEN';
 THEN: 'THEN';
 ELSE: 'ELSE';
@@ -918,6 +925,8 @@ TILDE: '~';
 AMPERSAND: '&';
 PIPE: '|';
 CONCAT_PIPE: '||';
+GO_CONCAT: '#';
+GO_CONCAT2: '|||';
 HAT: '^';
 
 PERCENTLIT: 'PERCENT';

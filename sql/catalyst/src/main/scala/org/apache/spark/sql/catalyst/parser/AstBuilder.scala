@@ -1162,6 +1162,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * - Binary OR: '|'
    */
   override def visitArithmeticBinary(ctx: ArithmeticBinaryContext): Expression = withOrigin(ctx) {
+    print(ctx.operator.getType)
     val left = expression(ctx.left)
     val right = expression(ctx.right)
     ctx.operator.getType match {
@@ -1177,14 +1178,25 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
         Add(left, right)
       case SqlBaseParser.MINUS =>
         Subtract(left, right)
-      case SqlBaseParser.CONCAT_PIPE =>
-        Concat(left :: right :: Nil)
       case SqlBaseParser.AMPERSAND =>
         BitwiseAnd(left, right)
       case SqlBaseParser.HAT =>
         BitwiseXor(left, right)
       case SqlBaseParser.PIPE =>
         BitwiseOr(left, right)
+    }
+  }
+
+  override def visitArithmeticGosun(ctx: ArithmeticGosunContext): Expression = withOrigin(ctx) {
+    val left = expression(ctx.left)
+    val right = expression(ctx.right)
+    ctx.operator.getType match {
+      case SqlBaseParser.GO_CONCAT =>
+        Concat(left :: right :: Nil)
+      case SqlBaseParser.GO_CONCAT2 =>
+        Concat(left :: right :: Nil)
+      case SqlBaseParser.CONCAT_PIPE =>
+        Concat(left :: right :: Nil)
     }
   }
 
@@ -1452,6 +1464,20 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
       (expression(wCtx.condition), expression(wCtx.result))
     }
     CaseWhen(branches, Option(ctx.elseExpression).map(expression))
+  }
+
+  /**
+   * Oracle的decode函数
+   */
+  override def visitDecodeCase(ctx: DecodeCaseContext): Expression = withOrigin(ctx) {
+    val condition = expression(ctx.condition)
+    val default = Option(ctx.elseExpression).map(expression)
+
+    val branches = ctx.decodeExpression().asScala.map { decode =>
+      (EqualTo(condition, expression(decode.valueExpression())), expression(decode.expression()))
+    }
+
+    CaseWhen(branches, default)
   }
 
   /**
